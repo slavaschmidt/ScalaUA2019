@@ -1,2 +1,15 @@
 *.class
 *.log
+logs
+target
+application-log*
+/.idea
+/.idea_modules
+/.classpath
+/.project
+/.settings
+/RUNNING_PID
+/.bloop
+/.metals
+/.vscode
+/project/.bloop
