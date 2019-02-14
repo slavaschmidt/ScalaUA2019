@@ -3,6 +3,7 @@ package fpt
 
 import java.time.{LocalDate, ZonedDateTime}
 
+import fpt.input.Entity
 import io.circe.Json
 import io.circe.syntax._
 import matryoshka._
@@ -43,6 +44,11 @@ object ResultFixPointTypes extends App {
 
   def resultToJson[T](result: T)(implicit raux: Recursive.Aux[T, ResultF]) =
     result.cata[Json](resultToJsonAlgebra)
+
+
+
+
+
 
 
   implicit val sourceFunctorImpl: Functor[SourceF] = new Functor[SourceF] {
