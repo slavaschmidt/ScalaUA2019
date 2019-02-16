@@ -1,12 +1,11 @@
-val enumeratum = "1.5.13"
-val enumeratumCirce = "1.5.18"
 
 lazy val rsDependencies = Seq(
-  "com.beachape" %% "enumeratum" % enumeratum,
-  "com.beachape" %% "enumeratum-circe" % enumeratumCirce,
+  "com.beachape" %% "enumeratum" % "1.5.13",
+  "com.beachape" %% "enumeratum-circe" % "1.5.18",
   "com.slamdata" %% "matryoshka-core" % "0.21.3",
-  "io.circe"     d%% "circe-generic" % "0.10.0"
+  "io.circe"     %% "circe-generic" % "0.10.0"
 )
+
 lazy val database = Seq(
   "org.scalikejdbc"     %% "scalikejdbc-async" % "0.11.+",
   "org.scalikejdbc"     %% "scalikejdbc-config" % "3.3.1",
