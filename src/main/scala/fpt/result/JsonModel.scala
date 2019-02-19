@@ -1,5 +1,4 @@
-package fpt
-
+package fpt.result
 
 import java.time.{LocalDate, ZonedDateTime}
 
@@ -9,6 +8,8 @@ import io.circe.syntax._
 import matryoshka._
 import matryoshka.implicits._
 import scalaz._
+import matryoshka.patterns._
+import matryoshka.data._
 
 import scala.language.higherKinds
 
@@ -44,38 +45,6 @@ object ResultFixPointTypes extends App {
 
   def resultToJson[T](result: T)(implicit raux: Recursive.Aux[T, ResultF]) =
     result.cata[Json](resultToJsonAlgebra)
-
-
-
-
-
-
-
-  implicit val sourceFunctorImpl: Functor[SourceF] = new Functor[SourceF] {
-    override def map[A, B](a: SourceF[A])(f: A => B): SourceF[B] = a match {
-      case Node(n ,c) => Node(n, c.map(f))
-    }
-  }
-
-  import matryoshka.patterns._
-  import matryoshka.data._
-
-  type FSF = Fix[SourceF]
-  type envt[A] = EnvT[Int, SourceF, A]
-
-
-
-  def maybe3: SourceF[Cofree[SourceF, Int]] => EnvT[Int, SourceF, Cofree[SourceF, Int]] = {
-    /*
-        case b @Block(a) => EnvT(a.length, b)
-        case at @ AndThen(_, _) => EnvT(2, at)
-    */
-    case x => EnvT((1, x))
-  }
-
-
-
-  def plzwork2(ast: FSF): Cofree[SourceF, Int] =  ast.transCata[Cofree[SourceF, Int]][envt](maybe3)
 
   def result[T](implicit caux: Corecursive.Aux[T, ResultF]): T =
     SliceF(
