@@ -6,9 +6,10 @@ import java.util.UUID
 object EntityBuilder {
   import scalikejdbc.WrappedResultSet
 
-  def shiftFromRs(rs: WrappedResultSet): ShiftEntity = {
+  def shiftFromRs(rs: WrappedResultSet): (UUID, ShiftEntity) = {
+    val areaId = UUID.fromString(rs.string("area_id"))
     val shift = ShiftEntity(
-      UUID.fromString(rs.get[String]("id")),
+      UUID.fromString(rs.string("shift_id")),
       rs.get[ZonedDateTime]("time"),
       rs.string("name"),
       rs.long("duration"),
@@ -19,9 +20,10 @@ object EntityBuilder {
       rs.long("number_of_order_changes"),
       rs.long("number_of_grade_changes")
     )
-    shift
+    (areaId, shift)
   }
-  def gradeFromRs(rs: WrappedResultSet): (UUID, GradeEntity) = {
+  def gradeFromRs(rs: WrappedResultSet): (UUID, UUID, GradeEntity) = {
+    val areaId = UUID.fromString(rs.string("area_id"))
     val shiftId = UUID.fromString(rs.string("shift_id"))
     val grade = GradeEntity(
       UUID.fromString(rs.string("id")),
@@ -36,10 +38,11 @@ object EntityBuilder {
       rs.double("square_meter_side_trim"),
       rs.longOpt("grade_weight")
     )
-    (shiftId, grade)
+    (areaId, shiftId, grade)
   }
 
-  def orderFromRs(rs: WrappedResultSet): (UUID, UUID, OrderEntity) = {
+  def orderFromRs(rs: WrappedResultSet): (UUID, UUID, UUID, OrderEntity) = {
+    val areaId = UUID.fromString(rs.string("area_id"))
     val shiftId = UUID.fromString(rs.string("shift_id"))
     val gradeId = UUID.fromString(rs.string("grade_id"))
     val order = OrderEntity(
@@ -50,10 +53,11 @@ object EntityBuilder {
       rs.double("width"),
       rs.double("order_length")
     )
-    (shiftId, gradeId, order)
+    (areaId, shiftId, gradeId, order)
   }
 
-  def stopFromRs(rs: WrappedResultSet): (UUID, UUID, UUID, StopEntity) = {
+  def stopFromRs(rs: WrappedResultSet): (UUID, UUID, UUID, UUID, StopEntity) = {
+    val areaId = UUID.fromString(rs.string("area_id"))
     val shiftId = UUID.fromString(rs.string("shift_id"))
     val gradeId = UUID.fromString(rs.string("grade_id"))
     val orderId = UUID.fromString(rs.string("order_id"))
@@ -67,7 +71,7 @@ object EntityBuilder {
       rs.string("stop_reason"),
       rs.string("stop_text")
     )
-    (shiftId, gradeId, orderId, stop)
+    (areaId, shiftId, gradeId, orderId, stop)
   }
 
 }

@@ -29,52 +29,59 @@ object FixPointTypes {
     }
   }
 
-  implicit val rowsFunctorImpl: Functor[RowsF] = new Functor[RowsF] {
+/*  implicit val rowsFunctorImpl: Functor[RowsF] = new Functor[RowsF] {
     override def map[A, B](a: RowsF[A])(f: A => B): RowsF[B] = {
       val F = implicitly[Functor[RowF]]
       a.map { rowF =>
         F.map(rowF)(f)
       }
     }
-  }
+  }*/
 
-  type RowsF[A] = Seq[RowF[A]]
+  // type RowsF[A] = Seq[RowF[A]]
 
   type EntitiesInput = (
-    Seq[ShiftEntity],
-      Seq[(UUID, GradeEntity)],
-      Seq[(UUID, UUID, OrderEntity)],
-      Seq[(UUID, UUID, UUID, StopEntity)]
+      Seq[AreaEntity],
+      Seq[(UUID, ShiftEntity)],
+      Seq[(UUID, UUID, GradeEntity)],
+      Seq[(UUID, UUID, UUID, OrderEntity)],
+      Seq[(UUID, UUID, UUID, UUID, StopEntity)]
     )
 }
-import FixPointTypes.{RowsF, EntitiesInput}
+import FixPointTypes.EntitiesInput
 
 object EntitiesConsumingBoundary extends App {
 
-  lazy val entitiesCoalgebra: Coalgebra[RowsF, EntitiesInput] = {
-    case (Nil, Nil, Nil, stops) =>
-      stops.map(_._4).map(ParentRowF(_, Nil))
-    case (Nil, Nil, orders, stops) =>
+  lazy val entitiesCoalgebra: Coalgebra[RowF, EntitiesInput] = {
+    case (Nil, Nil, Nil, Nil, Seq(stop)) =>
+      ParentRowF(stop._5, Nil)
+
+    case (Nil, Nil, Nil, Seq(row), stops) =>
+      val stopsF = stops.map { s => Fix(s._5) }
+      ParentRowF(row._4, stopsF)
+    case (Nil, Nil, Nil, orders, stops) =>
       orders.map { o =>
-        ParentRowF(o._3, List((Nil, Nil, Nil, stops.filter(_._3 == o._2))))
+        ParentRowF(o._3, List((Nil, Nil, Nil, Nil, stops.filter(_._3 == o._2))))
       }
-    case (shifts, Nil, orders, stops) =>
-      shifts.map { s =>
-        ParentRowF(s, List((Nil, Nil, orders, stops.filter(_._1 == s.id))))
+    case (Seq(area), shifts, grades, orders, stops) =>
+      var pushDown = shifts.map { s =>
+        ParentRowF(s, Seq((Nil, Nil, grades, orders, stops.filter(_._1 == s.id))))
       }
+      ParentRowF(area, pushDown)
     case others => ??? // TODO somehow it feels wrong
   }
 
-  def toShiftStops(shifts: Seq[ShiftEntity],
-                   grades: Seq[(UUID, GradeEntity)],
-                    orders: Seq[(UUID, UUID, OrderEntity)],
-                   stops: Seq[(UUID, UUID, UUID, StopEntity)])(implicit F: Functor[RowsF]) =
-    (shifts, grades, orders, stops).ana[Fix[RowsF]](entitiesCoalgebra)
+  def toShiftStops(area: AreaEntity,
+                   shifts: Seq[(UUID, ShiftEntity)],
+                   grades: Seq[(UUID, UUID, GradeEntity)],
+                   orders: Seq[(UUID, UUID, UUID, OrderEntity)],
+                   stops: Seq[(UUID, UUID, UUID, UUID, StopEntity)])(implicit F: Functor[RowF]) =
+    (Seq(area), shifts, grades, orders, stops).ana[Fix[RowF]](entitiesCoalgebra)
 
   import DbData._
-  import FixPointTypes.rowsFunctorImpl
+  import FixPointTypes.rowFunctorImpl
 
-  lazy val shiftFPData: Fix[RowsF] = toShiftStops(shifts, Nil, Nil, stopsData)
+  lazy val shiftFPData: Fix[RowF] = toShiftStops(area, shiftsData, Nil, Nil, stopsData)
 
   println(shiftFPData)
 }
@@ -89,14 +96,13 @@ object EntitiesProducingBoundary extends App {
 
   implicit val erf: Encoder[RowF[Json]] = (a: RowF[Json]) => a.asJson
 
-  lazy val entitiesAlgebra: Algebra[RowsF, Json] =
-    _.map {
-      case ParentRowF(row, children) => Map("row" -> row.asJson, "children" -> children.asJson).asJson
-    }.asJson
+  lazy val entitiesAlgebra: Algebra[RowF, Json] = {
+    case ParentRowF(row, children) => Map("row" -> row.asJson, "children" -> children.asJson).asJson
+  }
 
-  import FixPointTypes.rowsFunctorImpl
+  import FixPointTypes.rowFunctorImpl
 
-  def toJson[T](entity: T)(implicit r: Recursive.Aux[T, RowsF]): Json =
+  def toJson[T](entity: T)(implicit r: Recursive.Aux[T, RowF]): Json =
     entity.cata[Json](entitiesAlgebra)
 
   println(toJson(shiftFPData))
@@ -111,9 +117,9 @@ object EntitiesPassThrough extends App {
 
   import DbData._
 
-  import FixPointTypes.rowsFunctorImpl
+  import FixPointTypes.rowFunctorImpl
 
-  println(hylo[RowsF, EntitiesInput, Json]((shifts, Nil, Nil, stopsData))(entitiesAlgebra, entitiesCoalgebra))
+  println(hylo[RowF, EntitiesInput, Json]((Seq(area), shiftsData, Nil, Nil, stopsData))(entitiesAlgebra, entitiesCoalgebra))
 
 
 }
