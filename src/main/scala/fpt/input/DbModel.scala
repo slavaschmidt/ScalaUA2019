@@ -29,17 +29,6 @@ object FixPointTypes {
     }
   }
 
-  /*  implicit val rowsFunctorImpl: Functor[RowsF] = new Functor[RowsF] {
-    override def map[A, B](a: RowsF[A])(f: A => B): RowsF[B] = {
-      val F = implicitly[Functor[RowF]]
-      a.map { rowF =>
-        F.map(rowF)(f)
-      }
-    }
-  }*/
-
-  // type RowsF[A] = Seq[RowF[A]]
-
   type EntitiesInput = (
     Seq[AreaEntity],
     Seq[(UUID, ShiftEntity)],

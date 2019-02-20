@@ -2,7 +2,7 @@ package fpt.calculation
 
 import java.time.LocalDate
 
-import fpt.input.{EntitiesConsumingBoundary, ParentRowF, RowF}
+import fpt.input._
 import scalaz.{Cofree, Functor}
 import matryoshka._
 import matryoshka.implicits._
@@ -29,6 +29,10 @@ object Enrichment extends App {
 
   def lift: RowF[Cofree[RowF, Label]] => EnvT[Label, RowF, Cofree[RowF, Label]] = {
     case x: RowF[Cofree[RowF, Label]] => EnvT((Label.default, x))
+  }
+
+  def byTimeUnit(units: Seq[TimeAlignment]): RowF[Cofree[RowF, Label]] => RowF[Cofree[RowF, Label]] = {
+    case x @ ParentRowF(e: Entity, children: Seq[Cofree[RowF, Label]]) => x
   }
 
   def listAst(ast: FSF): Cofree[RowF, Label] = ast.transCata[Cofree[RowF, Label]][envt](lift)
