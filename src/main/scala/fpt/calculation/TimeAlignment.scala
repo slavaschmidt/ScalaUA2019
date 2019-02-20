@@ -19,25 +19,21 @@ import scala.language.higherKinds
 import enumeratum._
 
 sealed trait TimeAlignment extends EnumEntry {
-  def apply(d: ZonedDateTime): Int
+  def apply(d: ZonedDateTime): LocalDate
 }
 
 object TimeAlignment extends Enum[TimeAlignment] with CirceEnum[TimeAlignment] {
   override val values = findValues
   final case object Day extends TimeAlignment {
-    override def apply(d: ZonedDateTime): Int = d.getDayOfYear + d.getYear * 1000
+    override def apply(d: ZonedDateTime): LocalDate = d.truncatedTo(ChronoUnit.DAYS).toLocalDate
   }
   final case object Week extends TimeAlignment {
-    override def apply(d: ZonedDateTime): Int = {
-      val year       = d.get(IsoFields.WEEK_BASED_YEAR)
-      val weekOfYear = d.get(IsoFields.WEEK_OF_WEEK_BASED_YEAR)
-      weekOfYear + year * 100
-    }
+    override def apply(d: ZonedDateTime): LocalDate = d.truncatedTo(ChronoUnit.HOURS).toLocalDate
   }
-  final case object Month extends TimeAlignment {
-    override def apply(d: ZonedDateTime): Int = d.getMonth.getValue + (d.getYear * 100)
-  }
-  final case object Year extends TimeAlignment {
-    override def apply(d: ZonedDateTime): Int = d.getYear
-  }
+  // final case object Month extends TimeAlignment {
+  //   override def apply(d: ZonedDateTime): LocalDate = d.truncatedTo(ChronoUnit.MONTHS).toLocalDate
+  // }
+  // final case object Year extends TimeAlignment {
+  //   override def apply(d: ZonedDateTime): LocalDate = d.truncatedTo(ChronoUnit.YEARS).toLocalDate
+  // }
 }

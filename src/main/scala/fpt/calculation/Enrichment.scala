@@ -21,18 +21,28 @@ object Enrichment extends App {
   type FSF     = Fix[RowF]
   type envt[A] = EnvT[Label, RowF, A]
 
-  implicit val sourceFunctorImpl: Functor[RowF] = new Functor[RowF] {
-    override def map[A, B](a: RowF[A])(f: A => B): RowF[B] = a match {
-      case ParentRowF(n, c) => ParentRowF(n, c.map(f))
-    }
-  }
+  import FixPointTypes.rowFunctorImpl
 
   def lift: RowF[Cofree[RowF, Label]] => EnvT[Label, RowF, Cofree[RowF, Label]] = {
     case x: RowF[Cofree[RowF, Label]] => EnvT((Label.default, x))
   }
 
-  def byTimeUnit(units: Seq[TimeAlignment]): RowF[Cofree[RowF, Label]] => RowF[Cofree[RowF, Label]] = {
-    case x @ ParentRowF(e: Entity, children: Seq[Cofree[RowF, Label]]) => x
+  def byTimeUnit(units: Seq[TimeAlignment]): Cofree[RowF, Label] => Cofree[RowF, Label] = {
+    case Cofree(label, ParentRowF(a: AreaEntity, children: Seq[Cofree[RowF, Label]])) =>
+      val byTime = units.map { unit =>
+        val pairs = children.groupBy { case Cofree(l: Label, p: ParentRowF[Entity @unchecked, _]) =>
+          unit(p.row.time)
+        }.toSeq
+        val withTime = pairs.flatMap { case (date, rows) =>
+          rows.map { row =>
+            Cofree(row.head.copy(time = Option(date)), row.tail)
+          }
+        }
+        val label = Label(Option(unit.entryName), Nil, None)
+        Cofree[RowF, Label](label, LevelRowF(withTime))
+      }
+      Cofree(label, ParentRowF(a, byTime))
+    case other => other
   }
 
   def listAst(ast: FSF): Cofree[RowF, Label] = ast.transCata[Cofree[RowF, Label]][envt](lift)
@@ -42,7 +52,9 @@ object Enrichment extends App {
   //          (implicit U: Corecursive.Aux[U, G], BF: Functor[F]): U
 
   lazy val lifted = listAst(EntitiesConsumingBoundary.shiftFPData)
-  println(s"${lifted.head} , ${lifted.tail}")
+  lazy val byTime = byTimeUnit(TimeAlignment.values)(lifted)
+  // println(s"${lifted.head} , ${lifted.tail}")
+  println(s"${byTime.head} , ${byTime.tail}")
 }
 /*
 

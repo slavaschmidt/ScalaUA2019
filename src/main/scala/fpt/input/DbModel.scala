@@ -12,6 +12,10 @@ import matryoshka.implicits._
 
 sealed trait RowF[+A]
 final case class ParentRowF[E <: Entity, B](row: E, children: Seq[B]) extends RowF[B]
+
+// Adding this for enrichement
+final case class LevelRowF[A](children: Seq[A]) extends RowF[A]
+
 // STEP 2: eliminate this as well // final case class BottomRowF[E <: Entity, B](row: E) extends RowF[B]
 
 // final case class AreaF[A](id: UUID, children: Seq[A])
@@ -26,6 +30,8 @@ object FixPointTypes {
     override def map[A, B](a: RowF[A])(f: A => B): RowF[B] = a match {
       case ParentRowF(r, d) => ParentRowF(r, d.map(f))
       // step 2 , eliminate // case BottomRowF(r) => BottomRowF(r)
+
+      case LevelRowF(c) => LevelRowF(c.map(f))
     }
   }
 
@@ -117,6 +123,7 @@ object EntitiesProducingBoundary extends App {
 
   lazy val entitiesAlgebra: Algebra[RowF, Json] = {
     case ParentRowF(row, children) => Map("row" -> row.asJson, "children" -> children.asJson).asJson
+    case LevelRowF(children) => children.asJson
   }
 
   import FixPointTypes.rowFunctorImpl
