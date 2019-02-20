@@ -12,7 +12,7 @@ import matryoshka.data._
 
 import scala.language.higherKinds
 
-object Enrichment {
+object Enrichment extends App {
 
   case class Label(name: Option[String], prefix: List[String], time: Option[LocalDate])
   object Label {
@@ -37,7 +37,8 @@ object Enrichment {
   //          (f: F[U] => G[U])
   //          (implicit U: Corecursive.Aux[U, G], BF: Functor[F]): U
 
-  println(listAst(EntitiesConsumingBoundary.shiftFPData))
+  lazy val lifted = listAst(EntitiesConsumingBoundary.shiftFPData)
+  println(s"${lifted.head} , ${lifted.tail}")
 }
 /*
 
