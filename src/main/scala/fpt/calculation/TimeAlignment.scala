@@ -13,7 +13,6 @@ import java.time._
 import java.time.format._
 import java.time.chrono._
 import java.time.temporal._
-
 import scala.language.higherKinds
 
 import enumeratum._
@@ -28,12 +27,15 @@ object TimeAlignment extends Enum[TimeAlignment] with CirceEnum[TimeAlignment] {
     override def apply(d: ZonedDateTime): LocalDate = d.truncatedTo(ChronoUnit.DAYS).toLocalDate
   }
   final case object Week extends TimeAlignment {
-    override def apply(d: ZonedDateTime): LocalDate = d.truncatedTo(ChronoUnit.HOURS).toLocalDate
+    override def apply(d: ZonedDateTime): LocalDate = 
+      d.`with`(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY)).truncatedTo(ChronoUnit.DAYS).toLocalDate
   }
-  // final case object Month extends TimeAlignment {
-  //   override def apply(d: ZonedDateTime): LocalDate = d.truncatedTo(ChronoUnit.MONTHS).toLocalDate
-  // }
-  // final case object Year extends TimeAlignment {
-  //   override def apply(d: ZonedDateTime): LocalDate = d.truncatedTo(ChronoUnit.YEARS).toLocalDate
-  // }
+  final case object Month extends TimeAlignment {
+    override def apply(d: ZonedDateTime): LocalDate = 
+    d.`with`(TemporalAdjusters.firstDayOfMonth).truncatedTo(ChronoUnit.DAYS).toLocalDate
+  }
+  final case object Year extends TimeAlignment {
+    override def apply(d: ZonedDateTime): LocalDate = 
+      d.`with`(TemporalAdjusters.firstDayOfYear).truncatedTo(ChronoUnit.DAYS).toLocalDate
+  }
 }
