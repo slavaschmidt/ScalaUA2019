@@ -10,11 +10,13 @@ import matryoshka.{hylo, _}
 import matryoshka.data.Fix
 import matryoshka.implicits._
 
-sealed trait RowF[+A]
+sealed trait RowF[+A] {
+  def children: Seq[A]
+}
 final case class ParentRowF[E <: Entity, B](row: E, children: Seq[B]) extends RowF[B]
 
-// Adding this for enrichement
-final case class LevelRowF[A](children: Seq[A]) extends RowF[A]
+// Adding this for enrichment
+final case class LevelRowF[+A](children: Seq[A]) extends RowF[A]
 
 // STEP 2: eliminate this as well // final case class BottomRowF[E <: Entity, B](row: E) extends RowF[B]
 
