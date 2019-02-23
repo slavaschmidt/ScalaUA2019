@@ -27,16 +27,19 @@ object Enrichment extends App {
     case x: RowF[Cofree[RowF, Label]] => EnvT((Label.default, x))
   }
 
-  def byTimeUnit(units: Seq[TimeAlignment]): Cofree[RowF, Label] => Cofree[RowF, Label] = {
+  // this is a function which only enriches the top level
+  def byTimeUnitFn(units: Seq[TimeAlignment]): Cofree[RowF, Label] => Cofree[RowF, Label] = {
     case Cofree(label, ParentRowF(a: AreaEntity, children: Seq[Cofree[RowF, Label]])) =>
       val byTime = units.map { unit =>
-        val pairs = children.groupBy { case Cofree(l: Label, p: ParentRowF[Entity @unchecked, _]) =>
-          unit(p.row.time)
+        val pairs = children.groupBy {
+          case Cofree(l: Label, p: ParentRowF[Entity @unchecked, _]) =>
+            unit(p.row.time)
         }.toSeq
-        val withTime = pairs.flatMap { case (date, rows) =>
-          rows.map { row =>
-            Cofree(row.head.copy(time = Option(date)), row.tail)
-          }
+        val withTime = pairs.flatMap {
+          case (date, rows) =>
+            rows.map { row =>
+              Cofree(row.head.copy(time = Option(date)), row.tail)
+            }
         }
         val label = Label(Option(unit.entryName), Nil, None)
         Cofree[RowF, Label](label, LevelRowF(withTime))
@@ -52,7 +55,7 @@ object Enrichment extends App {
   //          (implicit U: Corecursive.Aux[U, G], BF: Functor[F]): U
 
   lazy val lifted = listAst(EntitiesConsumingBoundary.shiftFPData)
-  lazy val byTime = byTimeUnit(TimeAlignment.values)(lifted)
+  lazy val byTime = byTimeUnitFn(TimeAlignment.values)(lifted)
   // println(s"${lifted.head} , ${lifted.tail}")
   println(s"${byTime.head} , ${byTime.tail}")
 }
