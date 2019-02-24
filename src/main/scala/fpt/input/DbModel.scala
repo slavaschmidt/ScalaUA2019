@@ -10,9 +10,7 @@ import matryoshka.{hylo, _}
 import matryoshka.data.Fix
 import matryoshka.implicits._
 
-sealed trait RowF[+A] {
-  def children: Seq[A]
-}
+trait RowF[+A]
 final case class ParentRowF[E <: Entity, B](row: E, children: Seq[B]) extends RowF[B]
 
 // Adding this for enrichment
@@ -125,7 +123,7 @@ object EntitiesProducingBoundary extends App {
 
   lazy val entitiesAlgebra: Algebra[RowF, Json] = {
     case ParentRowF(row, children) => Map("row" -> row.asJson, "children" -> children.asJson).asJson
-    case LevelRowF(children) => children.asJson
+    case LevelRowF(children)       => children.asJson
   }
 
   import FixPointTypes.rowFunctorImpl

@@ -14,10 +14,15 @@ import scala.language.higherKinds
 
 object Enrichment extends App {
 
-  case class Label(name: Option[String], prefix: List[String], time: Option[LocalDate])
+  case class Label(
+    name: Option[String],
+    prefix: List[String],
+    time: Option[LocalDate],
+    fn: Seq[(String, Seq[Entity] => Double)]
+  )
   object Label {
-    val default = Label(None, Nil, None)
-    def named(name: String) = Label(Option(name), Nil, None)
+    val default             = Label(None, Nil, None, Nil)
+    def named(name: String) = Label(Option(name), Nil, None, Nil)
   }
 
   type envt[A] = EnvT[Label, RowF, A]
@@ -36,7 +41,7 @@ object Enrichment extends App {
         }.toSeq
         val withTime = for {
           (date, rows) <- pairs
-          row <- rows
+          row          <- rows
         } yield Cofree(row.head.copy(time = Option(date)), row.tail)
         val label = Label.named(unit.entryName)
         Cofree[RowF, Label](label, LevelRowF(withTime))
@@ -48,50 +53,60 @@ object Enrichment extends App {
   // this is a function which creates additional layer for shifts
   val byShiftName: Cofree[RowF, Label] => Cofree[RowF, Label] = {
     case Cofree(label, ParentRowF(a: AreaEntity, children: Seq[Cofree[RowF, Label]])) =>
-        val byShift = children.groupBy {
-          case Cofree(_, p: ParentRowF[ShiftEntity @unchecked, _]) => p.row.name
-        }.toSeq
-        val ch = byShift.map {
-          case (shiftName, seq) => Cofree(Label.named(shiftName), LevelRowF(seq))
-        }
-        val nested: Seq[Cofree[RowF, Label]] = Seq(
-          Cofree(Label.named("Compare"), LevelRowF(ch)),
-          Cofree(Label.named("Sum"), LevelRowF(children))
-        )
-        Cofree(label, LevelRowF(nested))
+      val byShift = children.groupBy {
+        case Cofree(_, p: ParentRowF[ShiftEntity @unchecked, _]) => p.row.name
+      }.toSeq
+      val ch = byShift.map {
+        case (shiftName, seq) => Cofree(Label.named(shiftName), LevelRowF(seq))
+      }
+      val nested: Seq[Cofree[RowF, Label]] = Seq(
+        Cofree(Label.named("Compare"), LevelRowF(ch)),
+        Cofree(Label.named("Sum"), LevelRowF(children))
+      )
+      Cofree(label, LevelRowF(nested))
     case other => other
   }
 
-
   // use EnvT.hmap or EnvT.traverse
-  def byTimeUnitNat(units: Seq[TimeAlignment]): EnvT[Label, RowF, Cofree[RowF, Label]] => EnvT[Label, RowF, Cofree[RowF, Label]] = {
-    case x @ EnvT((l, r)) => r match {
-      case ParentRowF(a: AreaEntity, children: Seq[Cofree[RowF, Label]]) =>
-        val byTime = units.map { unit =>
-          val pairs = children.groupBy {
-            case Cofree(l: Label, p: ParentRowF[Entity @unchecked, _]) =>
-              unit(p.row.time)
-          }.toSeq
-          val withTime = for {
-            (date, rows) <- pairs
-            row <- rows
-          } yield Cofree(row.head.copy(time = Option(date)), row.tail)
-          val label = Label(Option(unit.entryName), Nil, None)
-          Cofree[RowF, Label](label, LevelRowF(withTime))
-        }
-        EnvT((l, ParentRowF(a, byTime)))
-      case ParentRowF(e, children: Seq[Cofree[RowF, Label]]) =>
-        val ch = children.map { case Cofree(label, row) =>
-            Cofree(label.copy(time = l.time), row)
-        }
-        EnvT((l, ParentRowF(e, ch)))
-      case LevelRowF(children: Seq[Cofree[RowF, Label]]) =>
-        val ch = children.map { case Cofree(label, row) =>
-            Cofree(label.copy(time = l.time), row)
-        }
-        EnvT((l, LevelRowF(ch)))
+  def byTimeUnitNat(
+    units: Seq[TimeAlignment]
+  ): EnvT[Label, RowF, Cofree[RowF, Label]] => EnvT[Label, RowF, Cofree[RowF, Label]] = {
+    case x @ EnvT((l, r)) =>
+      r match {
+        case ParentRowF(a: AreaEntity, children: Seq[Cofree[RowF, Label]]) =>
+          val byTime = units.map { unit =>
+            val pairs = children.groupBy {
+              case Cofree(l: Label, p: ParentRowF[Entity @unchecked, _]) =>
+                unit(p.row.time)
+            }.toSeq
+            val withTime = for {
+              (date, rows) <- pairs
+              row          <- rows
+            } yield Cofree(row.head.copy(time = Option(date)), row.tail)
+            val label = Label.named(unit.entryName)
+            Cofree[RowF, Label](label, LevelRowF(withTime))
+          }
+          EnvT((l, ParentRowF(a, byTime)))
+        case ParentRowF(e, children: Seq[Cofree[RowF, Label]]) =>
+          val ch = children.map {
+            case Cofree(label, row) =>
+              Cofree(label.copy(time = l.time), row)
+          }
+          EnvT((l, ParentRowF(e, ch)))
+        case LevelRowF(children: Seq[Cofree[RowF, Label]]) =>
+          val ch = children.map {
+            case Cofree(label, row) =>
+              Cofree(label.copy(time = l.time), row)
+          }
+          EnvT((l, LevelRowF(ch)))
 
-    }
+      }
+  }
+
+  def applyFunctions(
+    fn: Seq[(String, Seq[Entity] => Double)]
+  ): EnvT[Label, RowF, Cofree[RowF, Label]] => EnvT[Label, RowF, Cofree[RowF, Label]] = {
+    case EnvT((l, r)) => EnvT((l.copy(fn = fn), r))
   }
 
   import FixPointTypes.rowFunctorImpl
@@ -107,33 +122,33 @@ object Enrichment extends App {
     G[_] = envt = EnvT[Label, RowF, _]
     f: F[U] => G[U] = RowF[Cofree[RowF, Label]] => EnvT[Label, RowF, Cofree[RowF, Label]]
     F[_] = Fix[_]
-  */
+   */
   val listAst: (Fix[RowF]) => Cofree[RowF, Label] = _.transCata[Cofree[RowF, Label]][envt](lift)
 
   /*
     U = Cofree[RowF, Label]
     f: F[U] => G[U] = EnvT[Label, RowF, Cofree[RowF, Label]] => EnvT[Label, RowF, Cofree[RowF, Label]]
     F = G = EnvT[Label, RowF, _]
-  */
-  def byTimeUnitRec(units: Seq[TimeAlignment]): Cofree[RowF, Label] => Cofree[RowF, Label] = 
+   */
+  def byTimeUnitRec(units: Seq[TimeAlignment]): Cofree[RowF, Label] => Cofree[RowF, Label] =
     _.transCata[Cofree[RowF, Label]][envt](byTimeUnitNat(units))
+
+  def calculate(fn: Seq[(String, Seq[Entity] => Double)]): Cofree[RowF, Label] => Cofree[RowF, Label] =
+    _.transCata[Cofree[RowF, Label]][envt](applyFunctions(fn))
 
   lazy val lifted = listAst(EntitiesConsumingBoundary.shiftFPData)
 
   lazy val byTimeSimple = byTimeUnitRec(TimeAlignment.values)(lifted)
 
   lazy val fullChain = listAst andThen byShiftName andThen byTimeUnitRec(TimeAlignment.values)
-  
+
   lazy val fullChainBroken = listAst andThen byTimeUnitRec(TimeAlignment.values) andThen byShiftName
 
-  lazy val byTime  = fullChain(EntitiesConsumingBoundary.shiftFPData)
+  lazy val byTime = fullChain(EntitiesConsumingBoundary.shiftFPData)
 
   // println(s"${lifted.head} , ${lifted.tail}")
   println(s"${byTime.head} , ${byTime.tail}")
 }
-
-
-
 /*
 
 case class Labeled[S[_], A](label: A, source: S[Labeled[S, A]])
