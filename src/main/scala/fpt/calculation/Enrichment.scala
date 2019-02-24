@@ -3,10 +3,9 @@ package fpt.calculation
 import java.time.LocalDate
 
 import fpt.input._
-import scalaz.{Cofree, Functor}
+import scalaz.{Cofree}
 import matryoshka._
 import matryoshka.implicits._
-import scalaz._
 import matryoshka.patterns._
 import matryoshka.data._
 
@@ -144,10 +143,14 @@ object Enrichment extends App {
 
   lazy val fullChainBroken = listAst andThen byTimeUnitRec(TimeAlignment.values) andThen byShiftName
 
-  lazy val byTime = fullChain(EntitiesConsumingBoundary.shiftFPData)
+  lazy val byTime: Cofree[RowF, Label] = fullChain(EntitiesConsumingBoundary.shiftFPData)
 
   // println(s"${lifted.head} , ${lifted.tail}")
   println(s"${byTime.head} , ${byTime.tail}")
+
+  // having Foldable[RowF] we could do the following:
+  // println(byTime.cata(toTree).drawTree)
+
 }
 /*
 

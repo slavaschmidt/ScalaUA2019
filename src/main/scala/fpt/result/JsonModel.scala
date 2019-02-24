@@ -1,13 +1,12 @@
 package fpt.result
 
-import java.time.{LocalDate, ZonedDateTime}
+import java.time._
 
-import fpt.input.Entity
 import io.circe.Json
 import io.circe.syntax._
+import scalaz._
 import matryoshka._
 import matryoshka.implicits._
-import scalaz._
 import matryoshka.patterns._
 import matryoshka.data._
 
@@ -76,25 +75,69 @@ object ResultFixPointTypes extends App {
   /*
     Not possible - change of carrier
    */
-  val serialization: EnvT[Label, RowF, Cofree[RowF, Label]] => Fix[ResultF] = {
-    ???
-  }
+  val serialization: EnvT[Label, RowF, Cofree[RowF, Label]] => Fix[ResultF] = ???
   // val serialize: Cofree[RowF, Label] => Fix[ResultF] = _.transCata[Cofree[RowF, Label]][envt](serialization)
+
+  // normal, non-fixedpoint types
 
   sealed trait Result
   final case class Slice(mappings: Map[String, Result]) extends Result
   final case class Chart(points: Seq[Point]) extends Result
   final case class Point(time: LocalDate, data: Map[String, Double]) extends Result
+  import io.circe.generic.auto._
+  def resultToJson(r: Result) = r.asJson
 
-  import FixPointTypes.rowFunctorImpl
+  implicit val rowFF: Functor[RowF] = FixPointTypes.rowFunctorImpl
 
-  lazy val rowsToResultAlgebra: Algebra[RowF, Result] = {
-    ???
+  // This is not gonna work because we loose the context (labels)
+  // lazy val rowsToResultAlgebraNoWay: Algebra[RowF, Result] = ???
+  // def toResultNoWay[T](entity: T)(implicit r: Recursive.Aux[T, RowF]): Result =
+  //   entity.cata[Result](rowsToResultAlgebraNoWay)
+
+  // no Recursrive for Cofree
+  type cf[A] = Cofree[RowF, A]
+
+  lazy val rowsToResultAlgebraCofree: Algebra[cf, Result] = {
+    case Cofree(l: Label, row: RowF[Cofree[_, _] @unchecked]) => ???
   }
 
-  // val resultToJsonAlgebra: Algebra[ResultF, Json] =
+  def toResultCofree[T](entity: T)(implicit r: Recursive.Aux[T, cf]): Result =
+    entity.cata[Result](rowsToResultAlgebraCofree)
 
-  def toResult[T](entity: T)(implicit r: Recursive.Aux[T, RowF]): Json =
-    entity.cata[Result](rowsToResultAlgebra)
+  // val result = toResultCofree[cf[Label]](byTime)
+
+
+  /** Fold a structure `F` containing values in `W`, to a value `A`.
+    * @group algebras
+    */
+  // type GAlgebra[W[_], F[_], A]        = F[W[A]] => A    // GAlgebraM[W, Id, F, A]
+
+  type cfenvt[A] = Cofree[envt, A]
+
+  lazy val rowsToResultAlgebra: GAlgebra[cfenvt, envt, Result] = {
+    case a: EnvT[Label, RowF, cfenvt[Result]]=> ???
+  }
+
+  // histo is an extension of para, para is an extension of cata
+  // def histo[A](f: GAlgebra[Cofree[F, ?], F, A])(implicit BF: Functor[F]): A
+
+  def toResult[T](entity: T)(implicit r: Recursive.Aux[T, envt]): Result =
+    entity.histo[Result](rowsToResultAlgebra)
+
+  // implicit val auxCf = matryoshka.data.cofree.cofreeBirecursive[RowF, Label].rec
+
+  val result = toResult(byTime)
+
+  // type envt[A] = EnvT[Label, RowF, A]
+
+  // lazy val rowsToResultAlgebra: Algebra[envt, Result] = {
+  //   ???
+  // }
+
+  // def toResult[T](entity: T)(implicit r: Recursive.Aux[T, envt]): Result =
+  //   entity.cata[Result](rowsToResultAlgebra)
+
+  //   val result = toResultCofree[Cofree[RowF, Label]](byTime)
+
 
 }

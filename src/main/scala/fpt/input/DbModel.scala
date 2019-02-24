@@ -2,13 +2,14 @@ package fpt.input
 
 import java.util.UUID
 
-import io.circe.{Encoder, Json}
+import io.circe._
 
-import scala.language.higherKinds
 import scalaz._
-import matryoshka.{hylo, _}
+import matryoshka._
 import matryoshka.data.Fix
 import matryoshka.implicits._
+
+import scala.language.higherKinds
 
 trait RowF[+A]
 final case class ParentRowF[E <: Entity, B](row: E, children: Seq[B]) extends RowF[B]
@@ -122,7 +123,8 @@ object EntitiesProducingBoundary extends App {
   implicit val erf: Encoder[RowF[Json]] = (a: RowF[Json]) => a.asJson
 
   lazy val entitiesAlgebra: Algebra[RowF, Json] = {
-    case ParentRowF(row, children) => Map("row" -> row.asJson, "children" -> children.asJson).asJson
+    case ParentRowF(row, children: Seq[Json]) => 
+      Map("row" -> row.asJson, "children" -> children.asJson).asJson
     case LevelRowF(children)       => children.asJson
   }
 
