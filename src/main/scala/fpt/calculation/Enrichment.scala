@@ -122,7 +122,15 @@ object Enrichment extends App {
     f: F[U] => G[U] = RowF[Cofree[RowF, Label]] => EnvT[Label, RowF, Cofree[RowF, Label]]
     F[_] = Fix[_]
    */
-  val listAst: (Fix[RowF]) => Cofree[RowF, Label] = _.transCata[Cofree[RowF, Label]][envt](lift)
+
+  /*
+      implicit def toRecursiveOps[T, F[_]](target: T)(implicit tc: Aux[T, F]): Ops[T, F] =
+      new Ops[T, F] {
+        val self = target
+        val typeClassInstance = tc
+      }
+   */
+  val liftRows: Fix[RowF] => Cofree[RowF, Label] = _.transCata[Cofree[RowF, Label]][envt](lift)
 
   /*
     U = Cofree[RowF, Label]
@@ -135,7 +143,7 @@ object Enrichment extends App {
   def calculate(fn: Seq[(String, Seq[Entity] => Double)]): Cofree[RowF, Label] => Cofree[RowF, Label] =
     _.transCata[Cofree[RowF, Label]][envt](applyFunctions(fn))
 
-  lazy val lifted = listAst(EntitiesConsumingBoundary.shiftFPData)
+  lazy val lifted = liftRows(EntitiesConsumingBoundary.shiftFPData)
 
   lazy val byTimeSimple = byTimeUnitRec(TimeAlignment.values)(lifted)
 

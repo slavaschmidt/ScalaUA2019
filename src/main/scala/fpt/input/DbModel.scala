@@ -2,8 +2,8 @@ package fpt.input
 
 import java.util.UUID
 
+import io.circe.Json.JArray
 import io.circe._
-
 import scalaz._
 import matryoshka._
 import matryoshka.data.Fix
@@ -123,8 +123,8 @@ object EntitiesProducingBoundary extends App {
   implicit val erf: Encoder[RowF[Json]] = (a: RowF[Json]) => a.asJson
 
   lazy val entitiesAlgebra: Algebra[RowF, Json] = {
-    case ParentRowF(row, children: Seq[Json]) => 
-      Map("row" -> row.asJson, "children" -> children.asJson).asJson
+    case ParentRowF(row, children: Seq[Json]) =>
+      Map("row" -> row.asJson, "children" -> JArray(children)).asJson
     case LevelRowF(children)       => children.asJson
   }
 
