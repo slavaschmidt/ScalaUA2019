@@ -2,8 +2,8 @@ package fpt.input
 
 import java.util.UUID
 
+import io.circe.Json.JArray
 import io.circe._
-
 import scalaz._
 import matryoshka._
 import matryoshka.data.Fix
@@ -138,6 +138,8 @@ object EntitiesProducingBoundary extends App {
       Map("row" -> row.asJson, "children" -> children.asJson).asJson
     case LevelRowF(children) => children.asJson
   }
+
+  implicit val erf: Encoder[RowF[Json]] = (a: RowF[Json]) => a.asJson
 
   def toJson[T](entity: T)(implicit r: Recursive.Aux[T, RowF]): Json =
     entity.cata[Json](rowFAlgebra)

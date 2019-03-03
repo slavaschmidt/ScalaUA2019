@@ -139,7 +139,6 @@ object Enrichment extends App {
     f: F[U] => G[U] = RowF[Cofree[RowF, Label]] => EnvT[Label, RowF, Cofree[RowF, Label]]
     F[_] = Fix[_]
    */
-  val liftRows: Fix[RowF] => Cofree[RowF, Label] = _.transCata[Cofree[RowF, Label]][envt](lift)
 
   // def apply[G[_]: Functor]
   //         (f: F[U] => G[U])
@@ -150,6 +149,15 @@ object Enrichment extends App {
 
   // type U = Cofree[RowF, Label]
   // type G[_] = EnvT[Label, RowF, _]
+
+  /*
+      implicit def toRecursiveOps[T, F[_]](target: T)(implicit tc: Aux[T, F]): Ops[T, F] =
+      new Ops[T, F] {
+        val self = target
+        val typeClassInstance = tc
+      }
+   */
+  val liftRows: Fix[RowF] => Cofree[RowF, Label] = _.transCata[Cofree[RowF, Label]][envt](lift)
 
   /*
     U = Cofree[RowF, Label]
