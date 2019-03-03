@@ -68,7 +68,7 @@ object ResultFixPointTypes extends App {
   val json = resultToJson(result[Fix[ResultF]])
 
   println(json.asJson)
-  // type Algebra[F[_], A]               = F[A] => A
+  type Algebra[F[_], A] = F[A] => A
   // type Coalgebra[F[_], A]             = A => F[A]    // GCoalgebra[Id, F, A]
   // def hylo[F[_]: Functor, A, B](a: A)(φ: Algebra[F, B], ψ: Coalgebra[F, A]): B =
 
@@ -89,10 +89,10 @@ object ResultFixPointTypes extends App {
 
   implicit val rowFF: Functor[RowF] = FixPointTypes.rowFunctorImpl
 
-  // This is not gonna work because we loose the context (labels)
-  // lazy val rowsToResultAlgebraNoWay: Algebra[RowF, Result] = ???
+  // This is not gonna work because we need the context (labels)
+  // val rowsToResultAlgebraNoWay: Algebra[RowF, Result] = ???
   // def toResultNoWay[T](entity: T)(implicit r: Recursive.Aux[T, RowF]): Result =
-  //   entity.cata[Result](rowsToResultAlgebraNoWay)
+  // entity.cata[Result](rowsToResultAlgebra)
 
   // no Recursrive for Cofree
   type cf[A] = Cofree[RowF, A]
@@ -106,16 +106,17 @@ object ResultFixPointTypes extends App {
 
   // val result = toResultCofree[cf[Label]](byTime)
 
-
   /** Fold a structure `F` containing values in `W`, to a value `A`.
     * @group algebras
     */
   // type GAlgebra[W[_], F[_], A] = F[W[A]] => A    // GAlgebraM[W, Id, F, A]
 
+  type envt[A] = EnvT[Label, RowF, A]
+
   type cfenvt[A] = Cofree[envt, A]
 
   lazy val rowsToResultAlgebra: GAlgebra[cfenvt, envt, Result] = {
-    case a: EnvT[Label, RowF, cfenvt[Result]]=> ???
+    case a: EnvT[Label, RowF, cfenvt[Result]] => ???
   }
 
   // histo is an extension of para, para is an extension of cata
@@ -135,9 +136,8 @@ object ResultFixPointTypes extends App {
   // }
 
   // def toResult[T](entity: T)(implicit r: Recursive.Aux[T, envt]): Result =
-  //   entity.cata[Result](rowsToResultAlgebra)
+  // entity.cata[Result](rowsToResultAlgebra)
 
-  //   val result = toResultCofree[Cofree[RowF, Label]](byTime)
-
+  // val result = toResultCofree[Cofree[RowF, Label]](byTime)
 
 }

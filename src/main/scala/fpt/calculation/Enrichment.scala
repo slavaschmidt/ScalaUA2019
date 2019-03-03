@@ -50,7 +50,7 @@ object Enrichment extends App {
   }
 
   // this is a function which creates additional layer for shifts
-  val byShiftName: Cofree[RowF, Label] => Cofree[RowF, Label] = {
+  val byShiftNameFn: Cofree[RowF, Label] => Cofree[RowF, Label] = {
     case Cofree(label, ParentRowF(a: AreaEntity, children: Seq[Cofree[RowF, Label]])) =>
       val byShift = children.groupBy {
         case Cofree(_, p: ParentRowF[ShiftEntity @unchecked, _]) => p.row.name
@@ -63,6 +63,23 @@ object Enrichment extends App {
         Cofree(Label.named("Sum"), LevelRowF(children))
       )
       Cofree(label, LevelRowF(nested))
+    case other => other
+  }
+
+  // use EnvT.hmap or EnvT.traverse
+  val byShiftNameNat: EnvT[Label, RowF, Cofree[RowF, Label]] => EnvT[Label, RowF, Cofree[RowF, Label]] = {
+    case EnvT((label, ParentRowF(area: AreaEntity, children))) =>
+      val byShift = children.groupBy {
+        case Cofree(_, p: ParentRowF[ShiftEntity @unchecked, _]) => p.row.name
+      }.toSeq
+      val byShiftChildren = byShift.map {
+        case (shiftName, seq) => Cofree(Label.named(shiftName), LevelRowF(seq))
+      }
+      val nested: Seq[Cofree[RowF, Label]] = Seq(
+        Cofree(Label.named("Compare"), LevelRowF(byShiftChildren)),
+        Cofree(Label.named("Sum"), LevelRowF(children))
+      )
+      EnvT((label, ParentRowF(area, nested)))
     case other => other
   }
 
@@ -123,6 +140,16 @@ object Enrichment extends App {
     F[_] = Fix[_]
    */
 
+  // def apply[G[_]: Functor]
+  //         (f: F[U] => G[U])
+  //         (implicit U: Corecursive.Aux[U, G], BF: Functor[F])
+  //           : U =
+
+  // def transCata[T, U, G[_]: Functor, F[_]: Functor](t: T)(f: F[U] => G[U])(implicit U: Corecursive.Aux[U, G]): U = ???
+
+  // type U = Cofree[RowF, Label]
+  // type G[_] = EnvT[Label, RowF, _]
+
   /*
       implicit def toRecursiveOps[T, F[_]](target: T)(implicit tc: Aux[T, F]): Ops[T, F] =
       new Ops[T, F] {
@@ -137,21 +164,30 @@ object Enrichment extends App {
     f: F[U] => G[U] = EnvT[Label, RowF, Cofree[RowF, Label]] => EnvT[Label, RowF, Cofree[RowF, Label]]
     F = G = EnvT[Label, RowF, _]
    */
-  def byTimeUnitRec(units: Seq[TimeAlignment]): Cofree[RowF, Label] => Cofree[RowF, Label] =
+  def byTimeUnit(units: Seq[TimeAlignment]): Cofree[RowF, Label] => Cofree[RowF, Label] =
     _.transCata[Cofree[RowF, Label]][envt](byTimeUnitNat(units))
 
   def calculate(fn: Seq[(String, Seq[Entity] => Double)]): Cofree[RowF, Label] => Cofree[RowF, Label] =
     _.transCata[Cofree[RowF, Label]][envt](applyFunctions(fn))
 
+  def byShiftName: Cofree[RowF, Label] => Cofree[RowF, Label] =
+    _.transCata[Cofree[RowF, Label]][envt](byShiftNameNat)
+
   lazy val lifted = liftRows(EntitiesConsumingBoundary.shiftFPData)
 
-  lazy val byTimeSimple = byTimeUnitRec(TimeAlignment.values)(lifted)
+  lazy val byTimeSimple = byTimeUnit(TimeAlignment.values)(lifted)
 
-  lazy val fullChain = listAst andThen byShiftName andThen byTimeUnitRec(TimeAlignment.values)
+  lazy val fullChain = liftRows andThen byShiftName andThen byTimeUnit(TimeAlignment.values)
 
-  lazy val fullChainBroken = listAst andThen byTimeUnitRec(TimeAlignment.values) andThen byShiftName
+  // lazy val fullChain = liftRows andThen byShiftName andThen byTimeUnit(TimeAlignment.values) andThen calculate(
+  //   Seq("average" -> averageFn)
+  // )
+
+  lazy val fullChainBroken = liftRows andThen byTimeUnit(TimeAlignment.values) andThen byShiftName
 
   lazy val byTime: Cofree[RowF, Label] = fullChain(EntitiesConsumingBoundary.shiftFPData)
+
+  // val simple = liftRows andThen calculate(Seq("average" -> averageFn))
 
   // println(s"${lifted.head} , ${lifted.tail}")
   println(s"${byTime.head} , ${byTime.tail}")
