@@ -110,7 +110,7 @@ object ResultFixPointTypes extends App {
   /** Fold a structure `F` containing values in `W`, to a value `A`.
     * @group algebras
     */
-  // type GAlgebra[W[_], F[_], A]        = F[W[A]] => A    // GAlgebraM[W, Id, F, A]
+  // type GAlgebra[W[_], F[_], A] = F[W[A]] => A    // GAlgebraM[W, Id, F, A]
 
   type cfenvt[A] = Cofree[envt, A]
 
