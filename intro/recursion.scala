@@ -2,7 +2,7 @@ import scala.{List => _}
 object App {
 
   class Scope[A] {
-    type FA = A => A
+    type FA = A  => A
     type FT = FA => FA
 
     val rec: FT => FA = (f: FT) => (a: A) => f(rec(f))(a)
@@ -13,8 +13,8 @@ object App {
   case class Rec[F[_]](f: F[Rec[F]])
 
   trait ListF[+H, +T]
-  trait NilF                         extends ListF[Nothing, Nothing]
-  case object NilF                   extends NilF
+  trait NilF extends ListF[Nothing, Nothing]
+  case object NilF extends NilF
   case class ConsF[H, T](h: H, t: T) extends ListF[H, T]
 
   type List[A] = Rec[ListF[A, ?]]
@@ -24,7 +24,7 @@ object App {
   def cons[A](h: A, t: List[A]): List[A] = Rec[ListF[A, ?]](ConsF(h, t))
 
   trait TreeLike[+L, +N]
-  case class LeafLike[L, N](l: L)       extends TreeLike[L, Nothing]
+  case class LeafLike[L, N](l: L) extends TreeLike[L, Nothing]
   case class NodeLike[L, N](l: N, r: N) extends TreeLike[L, N]
 
   type Tree[L] = Rec[TreeLike[L, ?]]
@@ -42,7 +42,8 @@ object App {
   def hcons[A, R](h: A, t: R): A :: R = HRec[ListF[A, ?], R](ConsF(h, t))
 
   def main(args: Array[String]): Unit = {
-    val fact               = (f: Long => Long) => (n: Long) => if (n < 2) n else n * f(n - 1)
+    val fact = (f: Int => Int) => (n: Int) => if (n < 3) n else n * f(n - 1)
+
     def factorial(n: Long) = new Scope[Long].rec(fact)(n)
 
     println(factorial(15))

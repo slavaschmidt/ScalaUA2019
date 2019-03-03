@@ -1,12 +1,16 @@
 class Scope[A] {
-  type Fa = A => A
+  type Fa = A  => A
   type Ft = Fa => Fa
   val fix: Ft => Fa = f => a => f(fix(f))(a)
 }
 def fac(f: Long => Long)(n: Long) = if (n < 3) n else n * f(n - 1)
-def factorial(n: Long)            = new Scope[Long].fix(fac)(n)
 
-println(factorial(10))
+def factorialM(n: Int)      = (2 to n).reduce(_ * _)
+def factorialR(n: Int): Int = if (n < 3) n else n * factorialR(n - 1)
+
+println(factorialM(10))
+
+println(factorialR(10))
 
 import scala.language.higherKinds
 
@@ -24,6 +28,8 @@ def cons[A](h: A, t: Fix[FList[A, ?]]) = Fix[FList[A, ?]](FCons(h, t))
 val list: Fix[FList[Int, ?]] = cons(1, cons(2, cons(3, nil)))
 
 println(list)
+
+/* type-level fix point
 
 trait Inductive
 trait INil extends Inductive
@@ -46,9 +52,10 @@ val ls = hcons(1, hcons(2, hcons(3, hnil)))
 println(hs)
 
 println(ls)
+ */
 
 trait TreeF[+L, +N]
-case class LeafF[L, N](l: L)       extends TreeF[L, Nothing]
+case class LeafF[L, N](l: L) extends TreeF[L, Nothing]
 case class NodeF[L, N](l: N, r: N) extends TreeF[L, N]
 
 type Tree[L] = Fix[TreeF[L, ?]]

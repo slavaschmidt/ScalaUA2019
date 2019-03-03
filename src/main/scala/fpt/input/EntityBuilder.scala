@@ -23,7 +23,7 @@ object EntityBuilder {
     (areaId, shift)
   }
   def gradeFromRs(rs: WrappedResultSet): (UUID, UUID, GradeEntity) = {
-    val areaId = UUID.fromString(rs.string("area_id"))
+    val areaId  = UUID.fromString(rs.string("area_id"))
     val shiftId = UUID.fromString(rs.string("shift_id"))
     val grade = GradeEntity(
       UUID.fromString(rs.string("id")),
@@ -42,7 +42,7 @@ object EntityBuilder {
   }
 
   def orderFromRs(rs: WrappedResultSet): (UUID, UUID, UUID, OrderEntity) = {
-    val areaId = UUID.fromString(rs.string("area_id"))
+    val areaId  = UUID.fromString(rs.string("area_id"))
     val shiftId = UUID.fromString(rs.string("shift_id"))
     val gradeId = UUID.fromString(rs.string("grade_id"))
     val order = OrderEntity(
@@ -57,7 +57,7 @@ object EntityBuilder {
   }
 
   def stopFromRs(rs: WrappedResultSet): (UUID, UUID, UUID, UUID, StopEntity) = {
-    val areaId = UUID.fromString(rs.string("area_id"))
+    val areaId  = UUID.fromString(rs.string("area_id"))
     val shiftId = UUID.fromString(rs.string("shift_id"))
     val gradeId = UUID.fromString(rs.string("grade_id"))
     val orderId = UUID.fromString(rs.string("order_id"))
