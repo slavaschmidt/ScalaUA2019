@@ -177,15 +177,26 @@ object Enrichment extends App {
 
   lazy val byTimeSimple = byTimeUnit(TimeAlignment.values)(lifted)
 
-  lazy val fullChain = liftRows andThen byShiftName andThen byTimeUnit(TimeAlignment.values)
+  //lazy val fullChain = liftRows andThen byShiftName andThen byTimeUnit(TimeAlignment.values)
 
-  // lazy val fullChain = liftRows andThen byShiftName andThen byTimeUnit(TimeAlignment.values) andThen calculate(
-  //   Seq("average" -> averageFn)
-  // )
+  val averageFn: Seq[Entity] => Double = ???
 
-  lazy val fullChainBroken = liftRows andThen byTimeUnit(TimeAlignment.values) andThen byShiftName
+  lazy val fullChain = liftRows andThen byShiftName andThen byTimeUnit(TimeAlignment.values) andThen calculate(
+    Seq("average" -> averageFn)
+  )
 
   lazy val byTime: Cofree[RowF, Label] = fullChain(EntitiesConsumingBoundary.shiftFPData)
+
+  lazy val fullAlgebra = lift andThen byShiftNameNat andThen byTimeUnitNat(TimeAlignment.values) andThen applyFunctions(
+    Seq("average" -> averageFn)
+  )
+
+  def withFullAlgebra: Fix[RowF] => Cofree[RowF, Label] =
+    _.transCata[Cofree[RowF, Label]][envt](fullAlgebra)
+
+  lazy val byTimeEffective = withFullAlgebra(EntitiesConsumingBoundary.shiftFPData)
+
+  // lazy val fullChainBroken = liftRows andThen byTimeUnit(TimeAlignment.values) andThen byShiftName
 
   // val simple = liftRows andThen calculate(Seq("average" -> averageFn))
 
